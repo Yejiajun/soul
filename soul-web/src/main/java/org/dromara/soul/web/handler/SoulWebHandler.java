@@ -33,15 +33,15 @@ import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
 /**
- * this is web handler request starter.
+ * This is web handler request starter.
  *
  * @author xiaoyu(Myth)
  */
 public final class SoulWebHandler implements WebHandler {
 
-    private List<SoulPlugin> plugins;
+    private final List<SoulPlugin> plugins;
 
-    private Scheduler scheduler;
+    private final Scheduler scheduler;
 
     /**
      * Instantiates a new Soul web handler.

@@ -17,8 +17,7 @@
 
 package org.dromara.soul.common.utils;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -32,28 +31,34 @@ import java.time.temporal.ChronoUnit;
  * @author xiaoyu
  * @author dengliming
  */
+@Slf4j
 public class DateUtils {
-    
-    /**
-     * The constant LOGGER.
-     */
-    public static final Logger LOGGER = LoggerFactory.getLogger(DateUtils.class);
-    
+
     private static final String DATE_FORMAT_DATETIME = "yyyy-MM-dd HH:mm:ss";
-    
+
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern(DATE_FORMAT_DATETIME);
-    
     
     /**
      * parseLocalDateTime.
      * out put format:yyyy-MM-dd HH:mm:ss
      *
-     * @param str date String
+     * @param dataTime date String
      * @return yyyy -MM-dd HH:mm:ss
      * @see LocalDateTime
      */
-    public static LocalDateTime parseLocalDateTime(final String str) {
-        return LocalDateTime.parse(str, DateTimeFormatter.ofPattern(DATE_FORMAT_DATETIME));
+    public static LocalDateTime parseLocalDateTime(final String dataTime) {
+        return LocalDateTime.parse(dataTime, DateTimeFormatter.ofPattern(DATE_FORMAT_DATETIME));
+    }
+    
+    /**
+     * Parse local date time local date time.
+     *
+     * @param dataTime          the data time
+     * @param dateTimeFormatter the date time formatter
+     * @return the local date time
+     */
+    public static LocalDateTime parseLocalDateTime(final String dataTime, final String dateTimeFormatter) {
+        return LocalDateTime.parse(dataTime, DateTimeFormatter.ofPattern(dateTimeFormatter));
     }
     
     /**

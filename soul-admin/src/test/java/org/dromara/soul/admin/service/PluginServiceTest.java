@@ -37,6 +37,7 @@ import org.dromara.soul.admin.query.RuleQuery;
 import org.dromara.soul.admin.query.RuleConditionQuery;
 import org.dromara.soul.admin.service.impl.PluginServiceImpl;
 import org.dromara.soul.admin.vo.PluginVO;
+import org.dromara.soul.common.constant.AdminConstants;
 import org.dromara.soul.common.dto.PluginData;
 import org.junit.Before;
 import org.junit.Test;
@@ -49,9 +50,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
-
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -102,6 +102,10 @@ public final class PluginServiceTest {
         publishEvent();
         testCreate();
         testUpdate();
+
+        testCreateShouldPluginNameIsExist();
+        testUpdateShouldPluginNameNotExistWithPluginDO();
+        testUpdateShouldPluginNameNotExistWithDiffId();
     }
 
     @Test
@@ -109,10 +113,29 @@ public final class PluginServiceTest {
         PluginDO pluginDO = buildPluginDO("123");
         when(pluginMapper.selectById("123")).thenReturn(pluginDO);
         when(pluginMapper.delete("123")).thenReturn(1);
-        final List<String> ids = Arrays.asList(pluginDO.getId());
+
+        final List<String> ids = Collections.singletonList(pluginDO.getId());
         testSelectorDelete();
-        String msg = pluginService.delete(ids);
-        assertEquals(msg, StringUtils.EMPTY);
+        assertEquals(pluginService.delete(ids), StringUtils.EMPTY);
+    }
+
+    @Test
+    public void testDeleteShouldSysPluginIdNotExist() {
+        when(pluginMapper.selectById(any())).thenReturn(null);
+
+        PluginDO pluginDO = buildPluginDO("123");
+        final List<String> ids = Collections.singletonList(pluginDO.getId());
+        assertEquals(pluginService.delete(ids), AdminConstants.SYS_PLUGIN_ID_NOT_EXIST);
+    }
+
+    @Test
+    public void testDeleteShouldSysPluginNotDelete() {
+        PluginDO pluginDO = buildPluginDO("123");
+        pluginDO.setRole(0);
+        when(pluginMapper.selectById(any())).thenReturn(pluginDO);
+
+        final List<String> ids = Collections.singletonList(pluginDO.getId());
+        assertEquals(pluginService.delete(ids), AdminConstants.SYS_PLUGIN_NOT_DELETE);
     }
 
     @Test
@@ -120,9 +143,22 @@ public final class PluginServiceTest {
         publishEvent();
         BatchCommonDTO batchCommonDTO = new BatchCommonDTO();
         batchCommonDTO.setEnabled(false);
-        batchCommonDTO.setIds(Arrays.asList("123"));
+        batchCommonDTO.setIds(Collections.singletonList("123"));
         given(this.pluginMapper.updateEnable(any())).willReturn(1);
         assertThat(this.pluginService.enabled(batchCommonDTO.getIds(), batchCommonDTO.getEnabled()), equalTo(StringUtils.EMPTY));
+    }
+
+    @Test
+    public void testEnableShouldSysPluginIdNotExist() {
+        when(pluginMapper.selectById(any())).thenReturn(null);
+
+        BatchCommonDTO batchCommonDTO = new BatchCommonDTO();
+        batchCommonDTO.setEnabled(false);
+        batchCommonDTO.setIds(Collections.singletonList("123"));
+
+        given(this.pluginMapper.updateEnable(any())).willReturn(1);
+
+        assertThat(this.pluginService.enabled(batchCommonDTO.getIds(), batchCommonDTO.getEnabled()), equalTo(AdminConstants.SYS_PLUGIN_ID_NOT_EXIST));
     }
 
     @Test
@@ -155,7 +191,7 @@ public final class PluginServiceTest {
     @Test
     public void testListAll() {
         PluginDO pluginDO = buildPluginDO("123");
-        List<PluginDO> pluginDOList = Arrays.asList(pluginDO);
+        List<PluginDO> pluginDOList = Collections.singletonList(pluginDO);
         given(this.pluginMapper.selectAll()).willReturn(pluginDOList);
         List<PluginData> dataList = this.pluginService.listAll();
         assertNotNull(dataList);
@@ -184,20 +220,49 @@ public final class PluginServiceTest {
         assertEquals(this.pluginService.createOrUpdate(pluginDTO), StringUtils.EMPTY);
     }
 
+    private void testCreateShouldPluginNameIsExist() {
+        PluginDO pluginDO = buildPluginDO();
+        when(pluginMapper.selectByName(any())).thenReturn(pluginDO);
+
+        PluginDTO pluginDTO = buildPluginDTO("");
+        assertEquals(this.pluginService.createOrUpdate(pluginDTO), AdminConstants.PLUGIN_NAME_IS_EXIST);
+    }
+
+    private void testUpdateShouldPluginNameNotExistWithPluginDO() {
+        when(pluginMapper.selectByName(any())).thenReturn(null);
+
+        PluginDTO pluginDTO = buildPluginDTO("123");
+        assertEquals(this.pluginService.createOrUpdate(pluginDTO), AdminConstants.PLUGIN_NAME_NOT_EXIST);
+    }
+
+    private void testUpdateShouldPluginNameNotExistWithDiffId() {
+        PluginDO pluginDO = buildPluginDO();
+        when(pluginMapper.selectByName(any())).thenReturn(pluginDO);
+
+        PluginDTO pluginDTO = buildPluginDTO("456");
+        assertEquals(this.pluginService.createOrUpdate(pluginDTO), AdminConstants.PLUGIN_NAME_NOT_EXIST);
+    }
+
     private void testSelectorDelete() {
         final List<SelectorDO> selectorDOList = new ArrayList<>();
+        selectorDOList.add(SelectorDO.builder().id("101").build());
         SelectorQuery selectorQuery = new SelectorQuery("123", null);
         when(selectorMapper.selectByQuery(selectorQuery)).thenReturn(selectorDOList);
+
         for (int i = 0; i < selectorDOList.size(); i++) {
             SelectorDO selectorDO = selectorDOList.get(i);
+
             final List<RuleDO> ruleDOList = new ArrayList<>();
+            ruleDOList.add(RuleDO.builder().id("202").build());
             RuleQuery ruleQuery = new RuleQuery(selectorDO.getId(), null);
             when(ruleMapper.selectByQuery(ruleQuery)).thenReturn(ruleDOList);
+
             for (int j = 0; j < ruleDOList.size(); j++) {
                 RuleDO ruleDO = ruleDOList.get(i);
                 when(ruleMapper.delete(ruleDO.getId())).thenReturn(1);
                 when(ruleConditionMapper.deleteByQuery(new RuleConditionQuery(ruleDO.getId()))).thenReturn(1);
             }
+
             when(selectorMapper.delete(selectorDO.getId())).thenReturn(1);
             when(selectorConditionMapper.deleteByQuery(new SelectorConditionQuery(selectorDO.getId()))).thenReturn(1);
         }
